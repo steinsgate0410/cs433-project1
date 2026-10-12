@@ -1,0 +1,29 @@
+# Course data and public grading tools are downloaded separately.
+/dataset/
+/grading_tests/
+
+# Python and notebook caches.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+
+# Local settings and macOS metadata.
+.DS_Store
+.env
+.env.*
+.idea/
+.vscode/
+
+# Generated predictions and intermediate artifacts.
+/submission*.csv
+/predictions*.csv
+/outputs/
+/tmp/
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
