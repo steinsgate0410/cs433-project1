@@ -1,140 +1,96 @@
-# EPFL CS433 Project 1
+# EPFL CS-433 Project 1 — Heart Disease Classification
 
-Shared workspace for the Fall 2026 heart disease classification project.
-The current contribution implements the six required algorithms using NumPy.
-Data preparation, model comparison, validation, and the final prediction entry
-point still need to be implemented by the team.
+## Final submission
 
-## Implemented functions
+Reproduces **AIcrowd Submission #337816** (F1 **0.441**, accuracy **0.880**)
+with **BRFSS 2015**, codebook-aware preprocessing and sparse L1 logistic regression.
+Only Python standard library and NumPy are needed for the pipeline.
 
-The authoritative module for imports and grading is `implementations.py`.
-`implementations.ipynb` contains the corresponding notebook version.
+## Quick start
 
-| Function | Method |
-| --- | --- |
-| `mean_squared_error_gd` | Linear regression with batch gradient descent |
-| `mean_squared_error_sgd` | Linear regression with stochastic gradient descent, batch size 1 |
-| `least_squares` | Least squares with normal equations |
-| `ridge_regression` | Ridge regression with normal equations |
-| `logistic_regression` | Logistic regression with gradient descent |
-| `reg_logistic_regression` | Logistic regression with L2 regularization |
+1. Download the official course datasets and put `x_train.csv`, `y_train.csv`,
+   and `x_test.csv` in `dataset/` (do not commit the dataset).
+2. Install `pip install -r requirements.txt`.
+3. Run `python run.py`.
+4. Upload the generated `submission.csv` to AIcrowd.
 
-Every function returns `(w, loss)`. Vectors are one-dimensional NumPy arrays:
-`y.shape == (N,)`, `w.shape == (D,)`, and `tx.shape == (N, D)`.
-The returned squared-error loss is `sum((y - tx @ w) ** 2) / (2 * N)`.
-Regularized methods return the data loss without the regularization penalty.
-Iterative methods return the loss evaluated at their final weights.
+The final model is **broad L1**, with **lambda=0.0005**, **1600 iterations**,
+**F1 threshold=0.208452**. It trains on all **328,135** labeled rows.
+Survey metadata, geographic IDs and phone sampling fields are excluded;
+health-related optional modules remain eligible. The encoder fits its categories,
+medians, missing indicators and standardization parameters on the training partition.
+Final encoded dimension in the validated run was 553; 201 coefficients were nonzero.
 
-## Using the functions
+## Code structure
 
-From another Python file in the repository root:
+- `implementations.py`: original six required numerical methods (unchanged
+  signatures) plus the extra proximal-FISTA logistic models.
+- `preprocessing.py`: exact V6 BRFSS cleaning rules, feature pools and encoder.
+- `helpers.py`: provided CSV utilities, V6 data loader, validation splits, metrics
+  and batch test submission writer.
+- `run.py`: **only** final frozen model refit and `submission.csv` generation.
+- `experiments.py`: eight-candidate CV ablation and the original V6 full-data
+  lambda tuning / threshold selection / convergence diagnostics.
+
+## Reproduce experiments (optional, slower)
+
+The original eight-model comparison on a 20% subsample can be run from Python:
+
+```python
+from helpers import load_brfss
+from experiments import CANDIDATES, evaluate_pipeline
+X, y, _, _ = load_brfss('dataset', sample_fraction=0.2)
+result = evaluate_pipeline(X, y, candidates=CANDIDATES, folds=3,
+                           iterations=600, criterion='auc', out_dir='step3_results')
+```
+
+Full-data tuning (expensive):
+
+```bash
+python experiments.py --data dataset
+```
+
+This executes 3-fold CV on the 80% development set for lambda candidates
+`0.00025, 0.0005, 0.00075, 0.001`, tunes an exact F1 threshold on a
+separate 20% partition, performs a convergence comparison (800 vs 1600
+iterations) and refits on all labels. The resulting output is
+`submission_refined_l1.csv`, distinct from `run.py`'s `submission.csv`.
+
+**Important:** `run.py` does **not** rerun CV; it is frozen to the
+parameters used for the graded submission. Do not choose model settings by
+looking at the AIcrowd hidden-test labels or leaderboard scores.
+
+## Reproducibility verification
+
+After running `python run.py` with the same original course CSVs:
 
 ```python
 import numpy as np
-from implementations import ridge_regression, logistic_regression
-
-# x_train and x_valid must already be cleaned and transformed consistently.
-# Add an intercept column in preprocessing if your model should use a bias.
-tx_train = np.column_stack((np.ones(x_train.shape[0]), x_train))
-tx_valid = np.column_stack((np.ones(x_valid.shape[0]), x_valid))
-
-# The provided dataset labels are -1 and 1.
-w, loss = ridge_regression(y_train, tx_train, lambda_=0.01)
-predictions = np.where(tx_valid @ w > 0, 1, -1)
-
-# Logistic regression requires labels 0 and 1.
-y_binary = (y_train == 1).astype(float)
-w, loss = logistic_regression(
-    y_binary,
-    tx_train,
-    initial_w=np.zeros(tx_train.shape[1]),
-    max_iters=1000,
-    gamma=0.01,
-)
-predictions = np.where(tx_valid @ w > 0, 1, -1)
+old = np.genfromtxt('submission_refined_l1.csv', delimiter=',', skip_header=1, dtype=int)
+new = np.genfromtxt('submission.csv', delimiter=',', skip_header=1, dtype=int)
+assert np.array_equal(old, new), 'Final submission differs from V6'
+print('Exact reproduction passed')
 ```
 
-This is an integration example, not a complete training script. The numerical
-hyperparameters are examples, not values selected through validation.
-The functions do not impute missing values, scale features, add an intercept,
-split the data, or choose classification thresholds.
-For reproducible SGD experiments, set a NumPy random seed before training.
+Keep the original `submission_refined_l1.csv` locally for this comparison.
+If an external BLAS environment produces boundary-point differences,
+check optimizer and feature ordering before treating the output as a reproduction.
 
-`helpers.py` provides `load_csv_data` and `create_csv_submission`. Download the
-course dataset separately and place its CSV files in `dataset/`. Dataset files
-are excluded from Git.
+## Course grading and report
 
-## Running the official public tests
+Keep all six required functions and their prescribed signatures in
+`implementations.py`. Run the official public grading tests. The final
+report is a separate document (at most two pages) and should identify
+the team members, methods, CV comparisons and final submission ID.
 
-Download the course's `grading_tests` directory from:
-https://github.com/epfml/ML_course/tree/main/projects/project1/grading_tests
+## Integration notes
 
-Place it in your local project root. It is excluded from Git, following the
-course instructions. The grading environment is separate from the libraries
-permitted in submitted project code.
+This combines V6 `step3_pipeline.py` and `tune_full.py` into five Python
+files. Teammates' six required algorithm implementations and original CSV
+helpers remain intact. An earlier `preprocessing.py` supplied optional
+dataframe-like utility functions; these are kept where useful, but its
+mean-imputation shortcut and the separate `data_cleaning.py` are not used
+in the final model because they differ from the graded V6 encoder.
 
-If the grading environment does not exist yet:
-
-```bash
-conda env create --file=grading_tests/environment.yml --name=project1-grading
-```
-
-Activate it, then run these commands from the project root:
-
-```bash
-conda activate project1-grading
-
-# Check the six functions: existence, docstrings, and numerical results.
-python -m pytest grading_tests/test_project1_public.py --github_link . -v \
-  -k 'function_exists or function_has_docstring or mean_squared_error or least_squares or ridge_regression or logistic_regression'
-
-# Run every public check against the local project.
-python -m pytest grading_tests/test_project1_public.py --github_link . -v
-```
-
-The function selection contains 22 tests, including 10 numerical tests.
-With a local directory, `test_github_link_format` is expected to fail: it requires
-a GitHub URL identifying a precise commit. The full suite also requires a
-`run.py` or `run.ipynb`; the team must implement that entry point to reproduce
-the final predictions. Passing public tests does not guarantee hidden-test
-coverage or a complete project submission.
-
-To format the project modules with the grader's Black version:
-
-```bash
-python -m black implementations.py helpers.py
-```
-
-For the final GitHub check, replace `YOUR_USERNAME`, `YOUR_REPOSITORY`, and
-`COMMIT_SHA` with the actual values. Run from the grading tools directory so the
-temporary clone is outside the submitted repository:
-
-```bash
-cd grading_tests
-python -m pytest test_project1_public.py \
-  --github_link 'https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/tree/COMMIT_SHA' -v
-```
-
-## Team workflow
-
-Keep working versions on branches and merge reviewed changes into `main`.
-Before starting a new task:
-
-```bash
-git switch main
-git pull --ff-only
-git switch -c feature/your-task
-```
-
-After implementing and checking your changes, stage the relevant files,
-commit them, and push your branch. For example:
-
-```bash
-git add preprocessing.py
-git commit -m "Add missing-value preprocessing"
-git push -u origin feature/your-task
-```
-
-Open a pull request on GitHub to review and merge the branch. Teammates can
-import the six functions from `implementations.py` and add preprocessing,
-experiments, the prediction entry point, and the report in separate files.
+Original V6 prediction code was preserved verbatim where possible, rather
+than changed to an alternative optimization implementation.
