@@ -1,0 +1,31 @@
+% Generated from report/audit/current_results.json; do not edit values by hand.
+\newcommand{\SelectedThreshold}{0.185}
+\newcommand{\HoldFone}{0.4385}
+\newcommand{\HoldAccuracy}{0.8667}
+\newcommand{\HoldPrecision}{0.3491}
+\newcommand{\HoldRecall}{0.5894}
+\newcommand{\FitMissing}{44.79}
+\newcommand{\RawFeatures}{185}
+\newcommand{\CompactDim}{187}
+\newcommand{\BroadDim}{643}
+\newcommand{\InteractionDim}{702}
+\newcommand{\FinalDim}{645}
+\newcommand{\MajorityAccuracy}{0.9117}
+\newcommand{\DefaultFone}{0.2237}
+\newcommand{\DefaultAccuracy}{0.9133}
+\newcommand{\ThresholdGain}{0.2148}
+\newcommand{\TruePositive}{1,708}
+\newcommand{\HoldPositive}{2,898}
+\newcommand{\FalsePositive}{3,185}
+\newcommand{\FalseNegative}{1,190}
+\newcommand{\TuneFone}{0.4245}
+\newcommand{\TuningRows}{Compact & $10^{-5}$ & 0.185 & 0.4210 & 0.8638 \\
+Compact & $10^{-4}$ & 0.185 & 0.4195 & 0.8643 \\
+Compact & $10^{-3}$ & 0.175 & 0.4145 & 0.8592 \\
+Broad & $10^{-5}$ & 0.170 & 0.4234 & 0.8556 \\
+\textbf{Broad} & $10^{-4}$ & 0.185 & 0.4245 & 0.8642 \\
+Broad & $10^{-3}$ & 0.180 & 0.4204 & 0.8612 \\
+Interactions & $10^{-5}$ & 0.185 & 0.4232 & 0.8620 \\
+Interactions & $10^{-4}$ & 0.195 & 0.4239 & 0.8672 \\
+Interactions & $10^{-3}$ & 0.185 & 0.4202 & 0.8623 \\}
+\newcommand{\AblationText}{The tuning results in Table~\ref{tab:tuning} favor Broad features with $\lambda=10^{-4}$ and threshold 0.185. At fixed $\lambda=10^{-4}$, expanding Compact to Broad raises tuning F1 from 0.4195 to 0.4245, a gain of 0.0050. Adding interactions gives 0.4239; Broad has the highest tuning F1 among the nine candidates. Each candidate uses its own threshold selected by the same rule. The gain from additional survey fields is larger than the difference between Broad and Interactions.}

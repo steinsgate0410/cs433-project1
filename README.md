@@ -1,140 +1,46 @@
-# EPFL CS433 Project 1
+# Heart Disease Classification
 
-Shared workspace for the Fall 2026 heart disease classification project.
-The current contribution implements the six required algorithms using NumPy.
-Data preparation, model comparison, validation, and the final prediction entry
-point still need to be implemented by the team.
+EPFL CS-433 Machine Learning, Project 1
 
-## Implemented functions
+Boyang Hu, Jinrun Jiang and Yunqing Pan (equal contribution)
 
-The authoritative module for imports and grading is `implementations.py`.
-`implementations.ipynb` contains the corresponding notebook version.
+This project uses NumPy logistic regression to classify reported heart disease from BRFSS survey data. The labeled data contain 328,135 respondents and 321 features; 8.83% of labels are positive.
 
-| Function | Method |
-| --- | --- |
-| `mean_squared_error_gd` | Linear regression with batch gradient descent |
-| `mean_squared_error_sgd` | Linear regression with stochastic gradient descent, batch size 1 |
-| `least_squares` | Least squares with normal equations |
-| `ridge_regression` | Ridge regression with normal equations |
-| `logistic_regression` | Logistic regression with gradient descent |
-| `reg_logistic_regression` | Logistic regression with L2 regularization |
+## Method and results
 
-Every function returns `(w, loss)`. Vectors are one-dimensional NumPy arrays:
-`y.shape == (N,)`, `w.shape == (D,)`, and `tx.shape == (N, D)`.
-The returned squared-error loss is `sum((y - tx @ w) ** 2) / (2 * N)`.
-Regularized methods return the data loss without the regularization penalty.
-Iterative methods return the loss evaluated at their final weights.
+We use a stratified split with seed 42: 75% for fitting, 15% for tuning and 10% for holdout evaluation. Preprocessing includes feature filtering, missing-value handling, categorical encoding and numeric scaling. The notebook compares three feature sets (Compact, Broad and Interactions) and three L2 regularization strengths. It selects a model and decision threshold using tuning F1.
 
-## Using the functions
+The selected model uses Broad features, regularization `0.0001` and threshold `0.185`. On the 32,814-row holdout set, it achieves **F1 0.4385** and **accuracy 0.8667**. The same fitted model at threshold `0.5` achieves F1 0.2237 and accuracy 0.9133. The notebook then refits the selected configuration on all labeled rows and predicts the test set.
 
-From another Python file in the repository root:
+## Run the notebook
 
-```python
-import numpy as np
-from implementations import ridge_regression, logistic_regression
+Download the course dataset from the [AIcrowd challenge](https://www.aicrowd.com/challenges/epfl-machine-learning-project-1) and place these files in `dataset/`:
 
-# x_train and x_valid must already be cleaned and transformed consistently.
-# Add an intercept column in preprocessing if your model should use a bias.
-tx_train = np.column_stack((np.ones(x_train.shape[0]), x_train))
-tx_valid = np.column_stack((np.ones(x_valid.shape[0]), x_valid))
-
-# The provided dataset labels are -1 and 1.
-w, loss = ridge_regression(y_train, tx_train, lambda_=0.01)
-predictions = np.where(tx_valid @ w > 0, 1, -1)
-
-# Logistic regression requires labels 0 and 1.
-y_binary = (y_train == 1).astype(float)
-w, loss = logistic_regression(
-    y_binary,
-    tx_train,
-    initial_w=np.zeros(tx_train.shape[1]),
-    max_iters=1000,
-    gamma=0.01,
-)
-predictions = np.where(tx_valid @ w > 0, 1, -1)
+```text
+dataset/
+  x_train.csv
+  y_train.csv
+  x_test.csv
 ```
 
-This is an integration example, not a complete training script. The numerical
-hyperparameters are examples, not values selected through validation.
-The functions do not impute missing values, scale features, add an intercept,
-split the data, or choose classification thresholds.
-For reproducible SGD experiments, set a NumPy random seed before training.
-
-`helpers.py` provides `load_csv_data` and `create_csv_submission`. Download the
-course dataset separately and place its CSV files in `dataset/`. Dataset files
-are excluded from Git.
-
-## Running the official public tests
-
-Download the course's `grading_tests` directory from:
-https://github.com/epfml/ML_course/tree/main/projects/project1/grading_tests
-
-Place it in your local project root. It is excluded from Git, following the
-course instructions. The grading environment is separate from the libraries
-permitted in submitted project code.
-
-If the grading environment does not exist yet:
+The reported run used Python 3.13.15, NumPy 2.5.2, Matplotlib 3.11.0 and Jupyter Notebook 7.5.7. For example, create an environment and start the notebook from the project root:
 
 ```bash
-conda env create --file=grading_tests/environment.yml --name=project1-grading
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+jupyter notebook run.ipynb
 ```
 
-Activate it, then run these commands from the project root:
+Select the Python kernel from this environment, then choose **Restart Kernel and Run All Cells**. Small numerical differences across NumPy or BLAS environments can change the selected model when tuning scores are close.
 
-```bash
-conda activate project1-grading
+Running the notebook overwrites `submission.csv`, `results/model.npz` and the plots in `figures/`. The submission contains 109,379 predictions in the original test ID order, with labels `-1` and `+1`.
 
-# Check the six functions: existence, docstrings, and numerical results.
-python -m pytest grading_tests/test_project1_public.py --github_link . -v \
-  -k 'function_exists or function_has_docstring or mean_squared_error or least_squares or ridge_regression or logistic_regression'
+## Files
 
-# Run every public check against the local project.
-python -m pytest grading_tests/test_project1_public.py --github_link . -v
-```
-
-The function selection contains 22 tests, including 10 numerical tests.
-With a local directory, `test_github_link_format` is expected to fail: it requires
-a GitHub URL identifying a precise commit. The full suite also requires a
-`run.py` or `run.ipynb`; the team must implement that entry point to reproduce
-the final predictions. Passing public tests does not guarantee hidden-test
-coverage or a complete project submission.
-
-To format the project modules with the grader's Black version:
-
-```bash
-python -m black implementations.py helpers.py
-```
-
-For the final GitHub check, replace `YOUR_USERNAME`, `YOUR_REPOSITORY`, and
-`COMMIT_SHA` with the actual values. Run from the grading tools directory so the
-temporary clone is outside the submitted repository:
-
-```bash
-cd grading_tests
-python -m pytest test_project1_public.py \
-  --github_link 'https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/tree/COMMIT_SHA' -v
-```
-
-## Team workflow
-
-Keep working versions on branches and merge reviewed changes into `main`.
-Before starting a new task:
-
-```bash
-git switch main
-git pull --ff-only
-git switch -c feature/your-task
-```
-
-After implementing and checking your changes, stage the relevant files,
-commit them, and push your branch. For example:
-
-```bash
-git add preprocessing.py
-git commit -m "Add missing-value preprocessing"
-git push -u origin feature/your-task
-```
-
-Open a pull request on GitHub to review and merge the branch. Teammates can
-import the six functions from `implementations.py` and add preprocessing,
-experiments, the prediction entry point, and the report in separate files.
+- `run.ipynb` — data exploration, preprocessing, model selection, evaluation and prediction export.
+- `implementations.py` — the six required course methods. The notebook experiments use their own L-BFGS logistic optimizer.
+- `helpers.py` — data loading and CSV submission functions.
+- `report/report.pdf` — final two-page report; `report/report.tex` is its editable source.
+- `results/model.npz` — final weights and threshold; preprocessing rules are learned again when the notebook runs.
+- `figures/` — data overview and evaluation plots.

@@ -27,3 +27,10 @@ __pycache__/
 *.fdb_latexmk
 *.fls
 *.synctex.gz
+
+# Local execution and archive artifacts.
+/deliverables/
+*.log
+
+# Keep the exact deliverable prediction file under version control.
+!/submission.csv

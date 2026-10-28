@@ -21,19 +21,33 @@ def load_csv_data(data_path, sub_sample=False):
         train_ids (np.array): ids of training data
         test_ids (np.array): ids of test data
     """
-    y_train = np.genfromtxt(
+    y_train = np.loadtxt(
         os.path.join(data_path, "y_train.csv"),
         delimiter=",",
-        skip_header=1,
+        skiprows=1,
         dtype=int,
         usecols=1,
     )
-    x_train = np.genfromtxt(
-        os.path.join(data_path, "x_train.csv"), delimiter=",", skip_header=1
-    )
-    x_test = np.genfromtxt(
-        os.path.join(data_path, "x_test.csv"), delimiter=",", skip_header=1
-    )
+
+    # Preallocate once rather than retaining millions of Python objects.
+    # The distributed numeric CSVs use empty fields for missing values.
+    def read_features(filename):
+        path = os.path.join(data_path, filename)
+        with open(path) as stream:
+            columns = len(next(stream).strip().split(","))
+            rows = sum(1 for _ in stream)
+        values = np.empty((rows, columns))
+        with open(path) as stream:
+            next(stream)
+            for i, line in enumerate(stream):
+                line = line.strip().replace(",,", ",nan,").replace(",,", ",nan,")
+                if line.endswith(","):
+                    line += "nan"
+                values[i] = np.fromstring(line, sep=",")
+        return values
+
+    x_train = read_features("x_train.csv")
+    x_test = read_features("x_test.csv")
 
     train_ids = x_train[:, 0].astype(dtype=int)
     test_ids = x_test[:, 0].astype(dtype=int)
